@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>LIFF Token</title>
+<title>LIFF Send Info to Chat</title>
 <script charset="utf-8" src="https://static.line-scdn.net/liff/sdk/v2/liff.js"></script>
 </head>
 <body>
-    <h1>LIFF Token</h1>
-    <p id="accessToken"></p>
-    <p id="profile"></p>
+    <h1>LIFF情報送信テスト</h1>
+    <p>LIFFアプリが開かれたトークルームに情報を送信します。</p>
+    <p id="status"></p>
 
     <script>
         async function initializeLiff() {
@@ -15,36 +15,55 @@
                 await liff.init({
                     liffId: '2007556850-NzoOlegE'
                 });
-                console.log('LIFF init success');
+                document.getElementById('status').textContent = 'LIFF初期化成功。';
 
                 if (!liff.isLoggedIn()) {
-                    liff.login(); // ログインしていない場合はログインを促す
+                    // ログインしていない場合はログインを促す
+                    document.getElementById('status').textContent = 'LINEにログインしていません。ログインします...';
+                    liff.login(); 
                     return;
                 }
 
-                const accessToken = liff.getAccessToken();
-                document.getElementById('accessToken').textContent = 'Access Token: ' + accessToken;
-                console.log('Access Token:', accessToken);
+                if (!liff.isInClient()) {
+                    // LIFFがLINEアプリ内で開かれていない場合
+                    document.getElementById('status').textContent = 'このLIFFアプリはLINEアプリ内で開いてください。';
+                    return;
+                }
+                
+                const accessToken = liff.getAccessToken(); // アクセストークンを取得
+                const profile = await liff.getProfile(); // ユーザープロフィールを取得
+                
+                // 送信するメッセージの内容を定義
+                const messages = [
+                    {
+                        type: 'text',
+                        text: `ユーザーID: ${profile.userId}`
+                    },
+                    {
+                        type: 'text',
+                        text: `表示名: ${profile.displayName}`
+                    }
+                    // ★セキュリティ上の理由から、アクセストークンを送信する行はコメントアウトしています。
+                    //   もしどうしても必要であれば、以下のコメントアウトを解除してください。
+                    //   ただし、非常に危険な行為であることを理解してください。
+                    /*
+                    {
+                        type: 'text',
+                        text: `アクセストークン: ${accessToken}`
+                    }
+                    */
+                ];
 
-                // アクセストークンを使ってユーザープロフィールを取得
-                const profile = await liff.getProfile();
-                document.getElementById('profile').textContent = 
-                    `User Profile: ${profile.displayName} (User ID: ${profile.userId})`;
-                console.log('Profile:', profile);
+                // メッセージをトークルームに送信
+                await liff.sendMessages(messages);
+                document.getElementById('status').textContent = '情報をトークルームに送信しました。';
 
-                // ★ここから先は、取得したアクセストークンやプロフィール情報を使った処理を記述できます。
-                // 例: サーバーにデータを送信するなど
-                // fetch('https://your-backend.com/api/send-data', {
-                //     method: 'POST',
-                //     headers: {
-                //         'Content-Type': 'application/json',
-                //         'Authorization': 'Bearer ' + accessToken
-                //     },
-                //     body: JSON.stringify({ userId: profile.userId, displayName: profile.displayName })
-                // });
+                // LIFFアプリを閉じる
+                liff.closeWindow();
 
             } catch (err) {
-                console.error('LIFF init failed', err);
+                console.error('LIFF初期化またはメッセージ送信に失敗しました', err);
+                document.getElementById('status').textContent = 'エラーが発生しました: ' + err.message;
             }
         }
 
