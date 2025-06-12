@@ -1,0 +1,79 @@
+body {
+    background-color: black;
+    color: white;
+    font-family: sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+}
+
+#main {
+    max-width: 600px;
+    margin: 0 auto;
+    border: 2px solid red;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+h1, h2, h3 {
+    color: red;
+}
+
+input[type="text"], input[type="password"] {
+    background-color: #333;
+    color: white;
+    border: 1px solid red;
+    padding: 8px;
+    margin: 5px;
+    border-radius: 5px;
+}
+
+button {
+    background-color: red;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    margin: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: darkred;
+}
+
+a {
+    color: lightblue;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Password Screen Styles */
+#password-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: black;
+    color: white;
+}
+
+#password-screen h1 {
+    color: red;
+    margin-bottom: 20px;
+}
+
+#password-input {
+    width: 200px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+#password-submit {
+    padding: 10px 30px;
+}
